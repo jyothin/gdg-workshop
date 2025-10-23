@@ -1,4 +1,6 @@
 venv/
 __pycache__/
+.cache_ggshield
 
-gdghyderabad-workshop/.env
+ogdghyderabad-workshop/.env
+gdghyderabad-workshop/__pycache__/

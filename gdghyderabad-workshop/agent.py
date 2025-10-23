@@ -5,6 +5,10 @@ import googlemaps
 from datetime import datetime
 import os
 import logging
+import requests
+
+BASE_URL = os.getenv("GOOGLEAPIS_BASE_URL")
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
 gmaps = googlemaps.Client(key=os.getenv("GOOGLE_MAPS_API_KEY"))
 
@@ -22,7 +26,7 @@ def get_location(city: str) -> dict:
     else:
         raise ValueError(f"Could not geocode city: {city}")
 
-def get_weather(city: str) -> dict:
+def get_current_weather(city: str) -> dict:
     """Retrieves the current weather report for a specified city.
 
     Args:
@@ -36,16 +40,31 @@ def get_weather(city: str) -> dict:
             "status": "error",
             "error_message": "City name must be a non-empty string."
         }
-    try:
-        location = get_location(city)
-        weather_result = gmaps.weather(location)
+    
+    city_normalized = city.lower().strip().replace(" ", "_")
 
-        return {
-            "status": "success",
-            "city": city,
-            "degree": weather_result['temperature']['degrees'],
-            "unit": weather_result['temperature']['unit']
+    try:
+        location = get_location(city_normalized)
+        logger.info(f"Location for {city}: {location}")
+        endpoint = f"{BASE_URL}/currentConditions:lookup"
+        params = {
+            "location.latitude": location["lat"],
+            "location.longitude": location["lng"],
+            "key": GOOGLE_MAPS_API_KEY
         }
+        # weather_result = gmaps.weather(location)
+        # logger.info(f"Weather result for {city}: {weather_result}")
+
+        response = requests.get(endpoint, params=params)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        return response.json()
+
+        # return {
+        #     "status": "success",
+        #     "city": city,
+        #     "degree": response['temperature']['degrees'],
+        #     "unit": response['temperature']['unit']
+        # }
     except Exception as e:
         logger.error(f"Error getting weather for {city}: {str(e)}")
         return {
@@ -91,28 +110,9 @@ def get_current_time(city: str) -> dict:
         # Method 1: Try to find the timezone from pytz timezone database
         timezone_str = None
         city_normalized = city.lower().replace(" ", "_")
-        
-        # Try common city mappings first
-        common_city_mappings = {
-            "new_york": "America/New_York",
-            "los_angeles": "America/Los_Angeles",
-            "chicago": "America/Chicago",
-            "london": "Europe/London",
-            "paris": "Europe/Paris",
-            "tokyo": "Asia/Tokyo",
-            "sydney": "Australia/Sydney",
-            "mumbai": "Asia/Kolkata",
-            "hyderabad": "Asia/Kolkata",
-            "bangalore": "Asia/Kolkata",
-            "delhi": "Asia/Kolkata"
-        }
-        
-        if city_normalized in common_city_mappings:
-            timezone_str = common_city_mappings[city_normalized]
-            logger.debug(f"Found timezone in common mappings: {timezone_str}")
-        else:
-            # Try to find in timezone strings
-            for tz in pytz.all_timezones:
+
+        # Try to find in timezone strings
+        for tz in pytz.all_timezones:
                 if city_normalized in tz.lower():
                     timezone_str = tz
                     logger.debug(f"Found timezone by name match: {timezone_str}")
@@ -123,16 +123,16 @@ def get_current_time(city: str) -> dict:
             try:
                 # Use the Places API (New) as recommended
                 # First, geocode the city name to get coordinates
-                location = get_location(city)
+                location = get_location(city_normalized)
 
-                    # Get timezone from coordinates
-                    timezone_result = gmaps.timezone(
-                        location=location,
-                        timestamp=int(datetime.now().timestamp())
-                    )
-                    if timezone_result['status'] == 'OK':
-                        timezone_str = timezone_result['timeZoneId']
-                        logger.debug(f"Found timezone via Google Maps: {timezone_str}")
+                # Get timezone from coordinates
+                timezone_result = gmaps.timezone(
+                    location=location,
+                    timestamp=int(datetime.now().timestamp())
+                )
+                if timezone_result['status'] == 'OK':
+                    timezone_str = timezone_result['timeZoneId']
+                    logger.debug(f"Found timezone via Google Maps: {timezone_str}")
             except Exception as maps_error:
                 logger.warning(f"Google Maps API error: {maps_error}")
                 # Continue with the function, we'll handle the case if timezone_str is still None
@@ -166,7 +166,7 @@ root_agent = Agent(
     name='root_agent',
     description='Tells the current time and current weather in a specified city.',
     instruction='You are a helpful assistant that tells the current time and current weather in cities.',
-    tools=[get_current_time, get_timezones, get_weather],
+    tools=[get_current_time, get_timezones, get_current_weather],
 )
 
 
