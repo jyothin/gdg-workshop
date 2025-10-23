@@ -1,0 +1,4 @@
+pip>=25.2
+google-adk>=1.16.0
+pytz>=2025.2
+googlemaps>=4.10.0
