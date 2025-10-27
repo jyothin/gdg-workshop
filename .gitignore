@@ -4,3 +4,5 @@ __pycache__/
 
 ogdghyderabad-workshop/.env
 gdghyderabad-workshop/__pycache__/
+# Snyk Security Extension - AI Rules (auto-generated)
+.github/instructions/snyk_rules.instructions.md

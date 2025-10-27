@@ -1,11 +1,15 @@
-from google.adk.agents.llm_agent import Agent
-from datetime import datetime
-import pytz
-import googlemaps
-from datetime import datetime
+# Standard library imports
 import os
 import logging
+from datetime import datetime
+
+# Third-party imports
+import pytz
 import requests
+import googlemaps
+
+# Application-specific imports
+from google.adk.agents.llm_agent import Agent
 
 BASE_URL = os.getenv("GOOGLEAPIS_BASE_URL")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
@@ -52,19 +56,10 @@ def get_current_weather(city: str) -> dict:
             "location.longitude": location["lng"],
             "key": GOOGLE_MAPS_API_KEY
         }
-        # weather_result = gmaps.weather(location)
-        # logger.info(f"Weather result for {city}: {weather_result}")
 
         response = requests.get(endpoint, params=params)
         response.raise_for_status()  # Raise an exception for bad status codes
         return response.json()
-
-        # return {
-        #     "status": "success",
-        #     "city": city,
-        #     "degree": response['temperature']['degrees'],
-        #     "unit": response['temperature']['unit']
-        # }
     except Exception as e:
         logger.error(f"Error getting weather for {city}: {str(e)}")
         return {
@@ -72,20 +67,6 @@ def get_current_weather(city: str) -> dict:
             "error_message": f"Error getting weather: {str(e)}"
         }
     
-    # if city.lower() == "new york":
-    #     return {
-    #         "status": "success",
-    #         "report": (
-    #             "The weather in New York is sunny with a temperature of 25 degrees"
-    #             " Celsius (77 degrees Fahrenheit)."
-    #         ),
-    #     }
-    # else:
-    #     return {
-    #         "status": "error",
-    #         "error_message": f"Weather information for '{city}' is not available.",
-    #     }
-
 def get_timezones() -> list:
     """Returns a list of all available timezones."""
     return pytz.all_timezones
@@ -168,5 +149,3 @@ root_agent = Agent(
     instruction='You are a helpful assistant that tells the current time and current weather in cities.',
     tools=[get_current_time, get_timezones, get_current_weather],
 )
-
-
